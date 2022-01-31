@@ -16,7 +16,7 @@ import re
 
 import requests
 
-# optional - logging.basicConfig(filename='gabs_graphql.log', filemode='a', format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
+# optional - logging.basicConfig(filename='cli.log', filemode='a', format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 
 USAGE = f"""
@@ -30,6 +30,10 @@ Arguments:
   -v, --version
         display the current version of this CLI
   -a, --accountId=<YOUR_ACCOUNT_ID>
+        here you put your Harness Account ID, the one you can get on any URL after you are logged in.
+        example: https://app.harness.io/#/account/SSHyJhwkS1ym9wSLGyw2aw/dashboard
+                 My Account ID is: SSHyJhwkS1ym9wSLGyw2aw
+  -k, --delegateType=<SUPPORTED_DELEGATE_TYPE>
         here you put your Harness Account ID, the one you can get on any URL after you are logged in.
         example: https://app.harness.io/#/account/SSHyJhwkS1ym9wSLGyw2aw/dashboard
                  My Account ID is: SSHyJhwkS1ym9wSLGyw2aw
@@ -68,18 +72,20 @@ Example on a minimal way to use this CLI, after exporting some sensitive data:
 """
 HARNESS_USER = os.environ.get('HARNESS_USER')
 HARNESS_PWD = os.environ.get('HARNESS_PWD')
+SUPPORTED_DELEGATE_TYPE_ARGUMENT_OPTS = ["shell", "docker", "ecs", "kubernetes"]
 
 
 def argument_parser():
     # default values for some optional parameters
     token_name = "default"
+    delegate_kind = "shell"
     username = HARNESS_USER
     username_password = HARNESS_PWD
 
     options, arguments = getopt.getopt(
         sys.argv[1:],  # Arguments
-        "vha:d:p:t:u:s:",  # Short option definitions
-        ["version", "help", "accountId=", "delegateName=", "profileId=", "tokenName=", "userMail=",
+        "vha:k:d:p:t:u:s:",  # Short option definitions
+        ["version", "help", "accountId=", "delegateType=", "delegateName=", "profileId=", "tokenName=", "userMail=",
          "password="])  # Long option definitions
     for o, a in options:
         if o in ("-v", "--version"):
@@ -90,6 +96,13 @@ def argument_parser():
             sys.exit()
         if o in ("-a", "--accountId"):
             account_id = a
+        if o in ("-k", "--delegateType"):
+            if a in SUPPORTED_DELEGATE_TYPE_ARGUMENT_OPTS:
+                delegate_kind = a
+            else:
+                print(USAGE)
+                logging.error("The provided Delegate kind/type is incorrect or is not supported yet. Please check the CLI `-k` option.")
+                sys.exit(1)
         if o in ("-d", "--delegateName"):
             delegate_name = a
         if o in ("-p", "--profileId"):
@@ -283,7 +296,7 @@ def main():
                                                 delegate_profile_id=cli_arguments['profile_id'])
 
     # 5-) Downloading the Delegate as tar.gz
-    download_delegate_bundle_tgz(final_url, "test_pycharm")
+    download_delegate_bundle_tgz(final_url, cli_arguments['delegate_name'])
 
 
 if __name__ == '__main__':
