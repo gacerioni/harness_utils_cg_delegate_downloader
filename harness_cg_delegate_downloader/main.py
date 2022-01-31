@@ -60,16 +60,15 @@ Arguments:
         
   
 Example on a mixed way to use this CLI:
-  python main.py --accountId=SSHyJhwkS1ym9wSLGyw2aw -d gabs-del --profileId=1234 -t custom -u gabriel.cerioni@harness.io --password super_secret42
-  python main.py --accountId=SSHyJhwkS1ym9wSLGyw2aw -d gabs-del --profileId=1234 -u gabriel.cerioni@harness.io --password super_secret42
+  python main.py --accountId=SSHyJhwkS1ym9wSLGyw2aw -k shell -d gabs-del --profileId=PtIuIQLiQjaQBub5Yeyzbw -t custom -u gabriel.cerioni@harness.io --password super_secret42
+  python main.py --accountId=SSHyJhwkS1ym9wSLGyw2aw --delegateType=shell -d gabs-del --profileId=PtIuIQLiQjaQBub5Yeyzbw -u gabriel.cerioni@harness.io --password super_secret42
   
 Example on a minimal way to use this CLI, after exporting some sensitive data:
   export HARNESS_USER=gacerioni@harness.io
   export HARNESS_PWD=super_secret42
   python3 main.py --accountId=SSHyJhwkS1ym9wSLGyw2aw -dgabs-del --profileId=1234
-
-
 """
+
 HARNESS_USER = os.environ.get('HARNESS_USER')
 HARNESS_PWD = os.environ.get('HARNESS_PWD')
 SUPPORTED_DELEGATE_TYPE_ARGUMENT_OPTS = ["shell", "docker", "ecs", "kubernetes"]
@@ -252,7 +251,11 @@ def get_final_delegate_download_url(del_signed_url, delegate_name, delegate_prof
 
 def download_delegate_bundle_tgz(final_download_url, result_file_name):
     try:
+        logging.info("Downloading the Delegate Bundle TGZ tar.gz. {0}")
+        logging.debug("This is the final URL: {0}".format(final_download_url))
         response = requests.get(final_download_url)
+        logging.info("HTTP Response/Status Code: {0}".format(response.status_code))
+        logging.info("HTTP Response Payload: {0}".format(response.content))
     except requests.exceptions.HTTPError as errh:
         logging.error("Http Error:", errh)
         raise
@@ -267,8 +270,6 @@ def download_delegate_bundle_tgz(final_download_url, result_file_name):
         raise
     else:
         file_name = "{0}.tar.gz".format(result_file_name)
-        print(response.status_code)
-        print(response)
         open(file_name, 'wb').write(response.content)
 
 
