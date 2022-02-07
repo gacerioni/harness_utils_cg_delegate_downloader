@@ -61,6 +61,7 @@ Example on a minimal way to use this CLI, after exporting some sensitive data:
 HARNESS_USER = os.environ.get('HARNESS_USER')
 HARNESS_PWD = os.environ.get('HARNESS_PWD')
 HARNESS_ENGG_API_PATH = "/api/usageRestrictions/references/connectors"
+HARNESS_LOGIN_API_PATH = "/api/users/login"
 
 
 def argument_parser():
@@ -126,9 +127,11 @@ def argument_parser():
     return argument_dict
 
 
-def get_bearer_token(user, password):
+def get_bearer_token(user, password, manager_host):
     user_pwd_pattern = "{0}:{1}".format(user, password)
     encoded_usr_pwd = base64.b64encode(bytes(user_pwd_pattern, 'utf-8')).decode('utf-8')
+    full_login_url = "https://{0}{1}".format(manager_host, HARNESS_LOGIN_API_PATH)
+    logging.info("This is the LOGIN URL the CLI will use: {0}".format(full_login_url))
 
     payload = '{{"authorization": "Basic {0}"}}'.format(encoded_usr_pwd)
     logging.debug("This is your payload: {0}".format(payload))
@@ -136,7 +139,7 @@ def get_bearer_token(user, password):
     try:
         logging.info("Generating a fresh Token for user: {0}".format(user))
         response = requests.post(
-            'https://app.harness.io/gateway/api/users/login',
+            full_login_url,
             headers={'Accept': 'application/json, text/plain, */*', 'content-type': 'application/json'},
             data=payload)
         response.raise_for_status()
@@ -165,11 +168,13 @@ def get_bearer_token(user, password):
         return bearer_token
 
 
-def delete_api_generic_wrapper(bearer_token, full_api_endpoint, request_payload_dict):
-    logging.info("Running DELETE on this URL: {0}".format(full_api_endpoint))
+def delete_api_generic_wrapper(bearer_token, manager_host, api_endpoint, request_payload_dict):
+    full_delete_url = "https://{0}{1}".format(manager_host, api_endpoint)
+
+    logging.info("Running DELETE on this URL: {0}".format(full_delete_url))
     try:
         response = requests.get(
-            full_api_endpoint,
+            full_delete_url,
             headers={
                 'Accept': 'application/json, text/plain, */*',
                 'content-type': 'application/json; charset=utf-8',
@@ -214,10 +219,11 @@ def main():
         logging.info("Success! Your arguments seem to be valid!")
 
     # 2-) Now we'll get a fresh Token to start the work
-    session_bearer_token = get_bearer_token(cli_arguments['username'], cli_arguments['username_password'])
-    print(session_bearer_token)
-
-    # 3-)
+    session_bearer_token = get_bearer_token(cli_arguments['username'], cli_arguments['username_password'], cli_arguments['manager_host'])
+    
+    # 3-) Finally, we send the DELETE to the API requested by the Engineer
+    delete_usage_restrictions_payload = {"accountId": cli_arguments['account_id']}
+    delete_usage_restrictions_result = delete_api_generic_wrapper(session_bearer_token, cli_arguments['manager_host'], HARNESS_ENGG_API_PATH, delete_usage_restrictions_payload)
 
 if __name__ == '__main__':
     main()
